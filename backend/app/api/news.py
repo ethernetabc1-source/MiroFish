@@ -136,12 +136,16 @@ def create_project_from_articles():
                 continue
 
             # Add metadata header to each article
+            # Truncate body to avoid token overload when 20 full articles
+            # are later sent to OntologyGenerator
+            truncated_text = text[:3000] if len(text) > 3000 else text
+
             article_content = (
                 f"Title: {title}\n"
                 f"Source: {art.get('source', '')}\n"
                 f"Published: {art.get('published', '')}\n"
                 f"URL: {art.get('url', '')}\n\n"
-                f"{text}"
+                f"{truncated_text}"
             )
 
             # Save as individual file
