@@ -121,81 +121,187 @@
         <!-- 右栏：交互控制台 -->
         <div class="right-panel">
           <div class="console-box">
-            <!-- 上传区域 -->
-            <div class="console-section">
-              <div class="console-header">
-                <span class="console-label">01 / 现实种子</span>
-                <span class="console-meta">支持格式: PDF, MD, TXT</span>
-              </div>
-              
-              <div 
-                class="upload-zone"
-                :class="{ 'drag-over': isDragOver, 'has-files': files.length > 0 }"
-                @dragover.prevent="handleDragOver"
-                @dragleave.prevent="handleDragLeave"
-                @drop.prevent="handleDrop"
-                @click="triggerFileInput"
-              >
-                <input
-                  ref="fileInput"
-                  type="file"
-                  multiple
-                  accept=".pdf,.md,.txt"
-                  @change="handleFileSelect"
-                  style="display: none"
-                  :disabled="loading"
-                />
-                
-                <div v-if="files.length === 0" class="upload-placeholder">
-                  <div class="upload-icon">↑</div>
-                  <div class="upload-title">拖拽文件上传</div>
-                  <div class="upload-hint">或点击浏览文件系统</div>
+
+            <!-- 模式切换标签 -->
+            <div class="mode-tabs">
+              <button
+                class="mode-tab"
+                :class="{ active: inputMode === 'upload' }"
+                @click="inputMode = 'upload'"
+              >↑ Upload Files</button>
+              <button
+                class="mode-tab"
+                :class="{ active: inputMode === 'auto' }"
+                @click="inputMode = 'auto'"
+              >⚡ Auto-find Sources</button>
+            </div>
+
+            <!-- ── UPLOAD MODE ── -->
+            <template v-if="inputMode === 'upload'">
+              <!-- 上传区域 -->
+              <div class="console-section">
+                <div class="console-header">
+                  <span class="console-label">01 / 现实种子</span>
+                  <span class="console-meta">支持格式: PDF, MD, TXT</span>
                 </div>
-                
-                <div v-else class="file-list">
-                  <div v-for="(file, index) in files" :key="index" class="file-item">
-                    <span class="file-icon">📄</span>
-                    <span class="file-name">{{ file.name }}</span>
-                    <button @click.stop="removeFile(index)" class="remove-btn">×</button>
+
+                <div
+                  class="upload-zone"
+                  :class="{ 'drag-over': isDragOver, 'has-files': files.length > 0 }"
+                  @dragover.prevent="handleDragOver"
+                  @dragleave.prevent="handleDragLeave"
+                  @drop.prevent="handleDrop"
+                  @click="triggerFileInput"
+                >
+                  <input
+                    ref="fileInput"
+                    type="file"
+                    multiple
+                    accept=".pdf,.md,.txt"
+                    @change="handleFileSelect"
+                    style="display: none"
+                    :disabled="loading"
+                  />
+
+                  <div v-if="files.length === 0" class="upload-placeholder">
+                    <div class="upload-icon">↑</div>
+                    <div class="upload-title">拖拽文件上传</div>
+                    <div class="upload-hint">或点击浏览文件系统</div>
+                  </div>
+
+                  <div v-else class="file-list">
+                    <div v-for="(file, index) in files" :key="index" class="file-item">
+                      <span class="file-icon">📄</span>
+                      <span class="file-name">{{ file.name }}</span>
+                      <button @click.stop="removeFile(index)" class="remove-btn">×</button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <!-- 分割线 -->
-            <div class="console-divider">
-              <span>输入参数</span>
-            </div>
+              <!-- 分割线 -->
+              <div class="console-divider"><span>输入参数</span></div>
 
-            <!-- 输入区域 -->
-            <div class="console-section">
-              <div class="console-header">
-                <span class="console-label">>_ 02 / 模拟提示词</span>
+              <!-- 输入区域 -->
+              <div class="console-section">
+                <div class="console-header">
+                  <span class="console-label">>_ 02 / 模拟提示词</span>
+                </div>
+                <div class="input-wrapper">
+                  <textarea
+                    v-model="formData.simulationRequirement"
+                    class="code-input"
+                    placeholder="// 用自然语言输入模拟或预测需求（例.武大若发布撤销肖某处分的公告，会引发什么舆情走向）"
+                    rows="6"
+                    :disabled="loading"
+                  ></textarea>
+                  <div class="model-badge">引擎: MiroFish-V1.0</div>
+                </div>
               </div>
-              <div class="input-wrapper">
-                <textarea
-                  v-model="formData.simulationRequirement"
-                  class="code-input"
-                  placeholder="// 用自然语言输入模拟或预测需求（例.武大若发布撤销肖某处分的公告，会引发什么舆情走向）"
-                  rows="6"
-                  :disabled="loading"
-                ></textarea>
-                <div class="model-badge">引擎: MiroFish-V1.0</div>
-              </div>
-            </div>
 
-            <!-- 启动按钮 -->
-            <div class="console-section btn-section">
-              <button 
-                class="start-engine-btn"
-                @click="startSimulation"
-                :disabled="!canSubmit || loading"
-              >
-                <span v-if="!loading">启动引擎</span>
-                <span v-else>初始化中...</span>
-                <span class="btn-arrow">→</span>
-              </button>
-            </div>
+              <!-- 启动按钮 -->
+              <div class="console-section btn-section">
+                <button
+                  class="start-engine-btn"
+                  @click="startSimulation"
+                  :disabled="!canSubmit || loading"
+                >
+                  <span v-if="!loading">启动引擎</span>
+                  <span v-else>初始化中...</span>
+                  <span class="btn-arrow">→</span>
+                </button>
+              </div>
+            </template>
+
+            <!-- ── AUTO-FIND SOURCES MODE ── -->
+            <template v-else>
+              <!-- Question input -->
+              <div class="console-section">
+                <div class="console-header">
+                  <span class="console-label">>_ 01 / 预测问题</span>
+                  <span class="console-meta">AI will find relevant news</span>
+                </div>
+                <div class="input-wrapper">
+                  <textarea
+                    v-model="autoQuestion"
+                    class="code-input"
+                    placeholder="// Enter your prediction question (e.g. Will US forces enter Iran? When will the Taiwan conflict escalate?)"
+                    rows="4"
+                    :disabled="autoLoading || autoArticles.length > 0"
+                  ></textarea>
+                  <div class="model-badge">引擎: MiroFish-V1.0</div>
+                </div>
+              </div>
+
+              <!-- Find Sources button (before results) -->
+              <div v-if="autoArticles.length === 0" class="console-section btn-section">
+                <button
+                  class="start-engine-btn"
+                  @click="findSources"
+                  :disabled="!autoQuestion.trim() || autoLoading"
+                >
+                  <span v-if="!autoLoading">⚡ Find Sources</span>
+                  <span v-else>Searching...</span>
+                  <span class="btn-arrow">→</span>
+                </button>
+              </div>
+
+              <!-- Progress bar -->
+              <div v-if="autoLoading" class="auto-progress-section">
+                <div class="progress-bar-track">
+                  <div class="progress-bar-fill" :style="{ width: autoProgress + '%' }"></div>
+                </div>
+                <div class="progress-message">{{ autoMessage }}</div>
+              </div>
+
+              <!-- Error -->
+              <div v-if="autoError" class="auto-error">{{ autoError }}</div>
+
+              <!-- Results -->
+              <div v-if="autoArticles.length > 0" class="auto-results">
+                <div class="console-divider">
+                  <span>{{ selectedArticleIds.size }} / {{ autoArticles.length }} sources selected</span>
+                </div>
+
+                <div class="articles-list">
+                  <div
+                    v-for="article in autoArticles"
+                    :key="article.id"
+                    class="article-item"
+                    :class="{ selected: selectedArticleIds.has(article.id) }"
+                    @click="toggleArticle(article.id)"
+                  >
+                    <div class="article-check">
+                      {{ selectedArticleIds.has(article.id) ? '☑' : '☐' }}
+                    </div>
+                    <div class="article-body">
+                      <div class="article-title">{{ article.title }}</div>
+                      <div class="article-meta">
+                        <span class="article-source">{{ article.source }}</span>
+                        <span v-if="article.category" class="article-category">{{ article.category }}</span>
+                        <span class="article-words" v-if="article.word_count">{{ article.word_count }} words</span>
+                      </div>
+                      <div v-if="article.snippet" class="article-snippet">{{ article.snippet.slice(0, 120) }}...</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Action buttons -->
+                <div class="console-section btn-section auto-btn-row">
+                  <button class="reset-btn" @click="resetAuto">← New Search</button>
+                  <button
+                    class="start-engine-btn"
+                    @click="startWithAutoSources"
+                    :disabled="selectedArticleIds.size === 0 || autoCreating"
+                  >
+                    <span v-if="!autoCreating">Start Simulation ({{ selectedArticleIds.size }})</span>
+                    <span v-else>Creating project...</span>
+                    <span class="btn-arrow">→</span>
+                  </button>
+                </div>
+              </div>
+            </template>
+
           </div>
         </div>
       </section>
@@ -210,98 +316,138 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import HistoryDatabase from '../components/HistoryDatabase.vue'
+import { startNewsCollection, getNewsTaskStatus, createProjectFromArticles } from '../api/news.js'
 
 const router = useRouter()
 
-// 表单数据
-const formData = ref({
-  simulationRequirement: ''
-})
+// ── Input mode ──────────────────────────────────────────────────────
+const inputMode = ref('upload') // 'upload' | 'auto'
 
-// 文件列表
+// ── Upload mode state ────────────────────────────────────────────────
+const formData = ref({ simulationRequirement: '' })
 const files = ref([])
-
-// 状态
 const loading = ref(false)
 const error = ref('')
 const isDragOver = ref(false)
-
-// 文件输入引用
 const fileInput = ref(null)
 
-// 计算属性:是否可以提交
-const canSubmit = computed(() => {
-  return formData.value.simulationRequirement.trim() !== '' && files.value.length > 0
-})
+const canSubmit = computed(() =>
+  formData.value.simulationRequirement.trim() !== '' && files.value.length > 0
+)
 
-// 触发文件选择
-const triggerFileInput = () => {
-  if (!loading.value) {
-    fileInput.value?.click()
-  }
-}
+const triggerFileInput = () => { if (!loading.value) fileInput.value?.click() }
 
-// 处理文件选择
-const handleFileSelect = (event) => {
-  const selectedFiles = Array.from(event.target.files)
-  addFiles(selectedFiles)
-}
+const handleFileSelect = (event) => addFiles(Array.from(event.target.files))
 
-// 处理拖拽相关
-const handleDragOver = (e) => {
-  if (!loading.value) {
-    isDragOver.value = true
-  }
-}
-
-const handleDragLeave = (e) => {
-  isDragOver.value = false
-}
-
+const handleDragOver = () => { if (!loading.value) isDragOver.value = true }
+const handleDragLeave = () => { isDragOver.value = false }
 const handleDrop = (e) => {
   isDragOver.value = false
-  if (loading.value) return
-  
-  const droppedFiles = Array.from(e.dataTransfer.files)
-  addFiles(droppedFiles)
+  if (!loading.value) addFiles(Array.from(e.dataTransfer.files))
 }
 
-// 添加文件
 const addFiles = (newFiles) => {
-  const validFiles = newFiles.filter(file => {
-    const ext = file.name.split('.').pop().toLowerCase()
-    return ['pdf', 'md', 'txt'].includes(ext)
-  })
-  files.value.push(...validFiles)
+  const valid = newFiles.filter(f => ['pdf', 'md', 'txt'].includes(f.name.split('.').pop().toLowerCase()))
+  files.value.push(...valid)
 }
+const removeFile = (index) => files.value.splice(index, 1)
 
-// 移除文件
-const removeFile = (index) => {
-  files.value.splice(index, 1)
-}
+const scrollToBottom = () => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
 
-// 滚动到底部
-const scrollToBottom = () => {
-  window.scrollTo({
-    top: document.body.scrollHeight,
-    behavior: 'smooth'
-  })
-}
-
-// 开始模拟 - 立即跳转，API调用在Process页面进行
 const startSimulation = () => {
   if (!canSubmit.value || loading.value) return
-  
-  // 存储待上传的数据
   import('../store/pendingUpload.js').then(({ setPendingUpload }) => {
     setPendingUpload(files.value, formData.value.simulationRequirement)
-    
-    // 立即跳转到Process页面（使用特殊标识表示新建项目）
-    router.push({
-      name: 'Process',
-      params: { projectId: 'new' }
-    })
+    router.push({ name: 'Process', params: { projectId: 'new' } })
   })
+}
+
+// ── Auto-find Sources state ──────────────────────────────────────────
+const autoQuestion = ref('')
+const autoLoading = ref(false)
+const autoProgress = ref(0)
+const autoMessage = ref('')
+const autoError = ref('')
+const autoArticles = ref([])
+const selectedArticleIds = ref(new Set())
+const autoCreating = ref(false)
+
+const toggleArticle = (id) => {
+  const s = new Set(selectedArticleIds.value)
+  if (s.has(id)) s.delete(id)
+  else s.add(id)
+  selectedArticleIds.value = s
+}
+
+const resetAuto = () => {
+  autoArticles.value = []
+  selectedArticleIds.value = new Set()
+  autoProgress.value = 0
+  autoMessage.value = ''
+  autoError.value = ''
+}
+
+const findSources = async () => {
+  if (!autoQuestion.value.trim() || autoLoading.value) return
+  autoLoading.value = true
+  autoError.value = ''
+  autoProgress.value = 0
+  autoMessage.value = 'Starting...'
+
+  try {
+    const res = await startNewsCollection(autoQuestion.value.trim())
+    const taskId = res.data?.data?.task_id
+    if (!taskId) throw new Error('No task ID returned')
+
+    // Poll until done
+    await new Promise((resolve, reject) => {
+      const poll = setInterval(async () => {
+        try {
+          const statusRes = await getNewsTaskStatus(taskId)
+          const d = statusRes.data?.data
+          autoProgress.value = d?.progress ?? autoProgress.value
+          autoMessage.value = d?.message ?? ''
+
+          if (d?.status === 'completed') {
+            clearInterval(poll)
+            const articles = d?.result?.articles ?? []
+            autoArticles.value = articles
+            selectedArticleIds.value = new Set(articles.map(a => a.id))
+            resolve()
+          } else if (d?.status === 'failed') {
+            clearInterval(poll)
+            reject(new Error(d?.error || 'Collection failed'))
+          }
+        } catch (e) {
+          clearInterval(poll)
+          reject(e)
+        }
+      }, 2000)
+    })
+  } catch (e) {
+    autoError.value = e.message || 'Failed to collect sources'
+  } finally {
+    autoLoading.value = false
+  }
+}
+
+const startWithAutoSources = async () => {
+  if (selectedArticleIds.value.size === 0 || autoCreating.value) return
+  autoCreating.value = true
+  try {
+    const selectedIds = Array.from(selectedArticleIds.value)
+    const res = await createProjectFromArticles(
+      autoQuestion.value.trim(),
+      autoArticles.value,
+      selectedIds
+    )
+    const projectId = res.data?.data?.project_id
+    if (!projectId) throw new Error('No project ID returned')
+    router.push({ name: 'Process', params: { projectId } })
+  } catch (e) {
+    autoError.value = e.message || 'Failed to create project'
+    autoCreating.value = false
+  }
 }
 </script>
 
@@ -666,9 +812,149 @@ const startSimulation = () => {
 }
 
 .console-box {
-  border: 1px solid #CCC; /* 外部实线 */
-  padding: 8px; /* 内边距形成双重边框感 */
+  border: 1px solid #CCC;
+  padding: 8px;
 }
+
+/* Mode tabs */
+.mode-tabs {
+  display: flex;
+  border-bottom: 1px solid #E5E5E5;
+  margin-bottom: 4px;
+}
+.mode-tab {
+  flex: 1;
+  padding: 10px 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #999;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+.mode-tab.active {
+  color: var(--black);
+  border-bottom-color: var(--orange);
+}
+.mode-tab:hover:not(.active) { color: #555; }
+
+/* Progress bar */
+.auto-progress-section {
+  padding: 12px 16px;
+}
+.progress-bar-track {
+  height: 4px;
+  background: #E5E5E5;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.progress-bar-fill {
+  height: 100%;
+  background: var(--orange);
+  transition: width 0.4s ease;
+}
+.progress-message {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: #666;
+}
+
+/* Auto error */
+.auto-error {
+  padding: 10px 16px;
+  color: #c0392b;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+
+/* Articles list */
+.auto-results { padding: 4px 0; }
+.articles-list {
+  max-height: 380px;
+  overflow-y: auto;
+  padding: 4px 8px;
+}
+.article-item {
+  display: flex;
+  gap: 10px;
+  padding: 10px 8px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-bottom: 4px;
+}
+.article-item:hover { background: #F9F9F9; border-color: #E5E5E5; }
+.article-item.selected { background: #FFF8F5; border-color: #FF4500; }
+.article-check {
+  font-size: 1.1rem;
+  color: var(--orange);
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+.article-body { flex: 1; min-width: 0; }
+.article-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--black);
+  line-height: 1.3;
+  margin-bottom: 4px;
+}
+.article-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+.article-source {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--orange);
+  font-weight: 600;
+}
+.article-category {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: #888;
+  background: #F0F0F0;
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+.article-words {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: #AAA;
+}
+.article-snippet {
+  font-size: 0.78rem;
+  color: #666;
+  line-height: 1.4;
+}
+
+/* Auto mode button row */
+.auto-btn-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.reset-btn {
+  padding: 12px 16px;
+  background: none;
+  border: 1px solid #CCC;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #555;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.reset-btn:hover { border-color: #888; color: #222; }
 
 .console-section {
   padding: 20px;
