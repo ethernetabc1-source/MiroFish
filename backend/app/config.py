@@ -17,21 +17,39 @@ else:
     load_dotenv(override=True)
 
 
+def _read_bearer_token():
+    """Read Claude Code session bearer token from file if available."""
+    token_file = os.environ.get('CLAUDE_SESSION_INGRESS_TOKEN_FILE')
+    if token_file and os.path.exists(token_file):
+        try:
+            return open(token_file).read().strip()
+        except Exception:
+            pass
+    return None
+
+
 class Config:
     """Flask配置类"""
-    
+
     # Flask配置
     SECRET_KEY = os.environ.get('SECRET_KEY', 'mirofish-secret-key')
     DEBUG = os.environ.get('FLASK_DEBUG', 'True').lower() == 'true'
-    
+
     # JSON配置 - 禁用ASCII转义，让中文直接显示（而不是 \uXXXX 格式）
     JSON_AS_ASCII = False
-    
+
+    # LLM provider: 'anthropic' or 'openai' (default)
+    LLM_PROVIDER = os.environ.get('LLM_PROVIDER', 'openai')
+
     # LLM配置（统一使用OpenAI格式）
     LLM_API_KEY = os.environ.get('LLM_API_KEY')
     LLM_BASE_URL = os.environ.get('LLM_BASE_URL', 'https://api.openai.com/v1')
     LLM_MODEL_NAME = os.environ.get('LLM_MODEL_NAME', 'gpt-4o-mini')
-    
+
+    # Anthropic配置（使用Claude Code session auth）
+    ANTHROPIC_BASE_URL = os.environ.get('ANTHROPIC_BASE_URL', 'https://api.anthropic.com')
+    ANTHROPIC_BEARER_TOKEN = _read_bearer_token()
+
     # Zep配置
     ZEP_API_KEY = os.environ.get('ZEP_API_KEY')
     
@@ -67,8 +85,12 @@ class Config:
     def validate(cls):
         """验证必要配置"""
         errors = []
-        if not cls.LLM_API_KEY:
-            errors.append("LLM_API_KEY 未配置")
+        if cls.LLM_PROVIDER == 'anthropic':
+            if not cls.ANTHROPIC_BEARER_TOKEN:
+                errors.append("Anthropic bearer token not found (CLAUDE_SESSION_INGRESS_TOKEN_FILE missing)")
+        else:
+            if not cls.LLM_API_KEY:
+                errors.append("LLM_API_KEY 未配置")
         if not cls.ZEP_API_KEY:
             errors.append("ZEP_API_KEY 未配置")
         return errors
