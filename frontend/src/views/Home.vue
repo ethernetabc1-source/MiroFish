@@ -399,9 +399,17 @@ const findSources = async () => {
     const taskId = res.data?.data?.task_id
     if (!taskId) throw new Error('No task ID returned')
 
-    // Poll until done
+    // Poll until done (max 5 minutes)
     await new Promise((resolve, reject) => {
+      let polls = 0
+      const MAX_POLLS = 150  // 150 × 2s = 5 minutes
       const poll = setInterval(async () => {
+        polls++
+        if (polls > MAX_POLLS) {
+          clearInterval(poll)
+          reject(new Error('Collection timed out after 5 minutes'))
+          return
+        }
         try {
           const statusRes = await getNewsTaskStatus(taskId)
           const d = statusRes.data?.data

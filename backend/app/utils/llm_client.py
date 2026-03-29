@@ -83,7 +83,13 @@ class LLMClient:
         )
         response.raise_for_status()
         data = response.json()
-        return data['content'][0]['text']
+        content_blocks = data.get('content', [])
+        if not content_blocks:
+            raise ValueError(
+                f"Anthropic API returned empty content blocks. "
+                f"stop_reason={data.get('stop_reason')}, model={data.get('model')}"
+            )
+        return content_blocks[0]['text']
 
     def chat(
         self,

@@ -17,6 +17,22 @@ else:
     load_dotenv(override=True)
 
 
+def _safe_int(key: str, default: int) -> int:
+    """Parse env var as int, falling back to default on invalid value."""
+    try:
+        return int(os.environ.get(key, str(default)))
+    except (ValueError, TypeError):
+        return default
+
+
+def _safe_float(key: str, default: float) -> float:
+    """Parse env var as float, falling back to default on invalid value."""
+    try:
+        return float(os.environ.get(key, str(default)))
+    except (ValueError, TypeError):
+        return default
+
+
 def _read_bearer_token():
     """Read Claude Code session bearer token from file if available."""
     token_file = os.environ.get('CLAUDE_SESSION_INGRESS_TOKEN_FILE')
@@ -63,7 +79,7 @@ class Config:
     DEFAULT_CHUNK_OVERLAP = 50  # 默认重叠大小
     
     # OASIS模拟配置
-    OASIS_DEFAULT_MAX_ROUNDS = int(os.environ.get('OASIS_DEFAULT_MAX_ROUNDS', '10'))
+    OASIS_DEFAULT_MAX_ROUNDS = _safe_int('OASIS_DEFAULT_MAX_ROUNDS', 10)
     OASIS_SIMULATION_DATA_DIR = os.path.join(os.path.dirname(__file__), '../uploads/simulations')
     
     # OASIS平台可用动作配置
@@ -77,9 +93,9 @@ class Config:
     ]
     
     # Report Agent配置
-    REPORT_AGENT_MAX_TOOL_CALLS = int(os.environ.get('REPORT_AGENT_MAX_TOOL_CALLS', '5'))
-    REPORT_AGENT_MAX_REFLECTION_ROUNDS = int(os.environ.get('REPORT_AGENT_MAX_REFLECTION_ROUNDS', '2'))
-    REPORT_AGENT_TEMPERATURE = float(os.environ.get('REPORT_AGENT_TEMPERATURE', '0.5'))
+    REPORT_AGENT_MAX_TOOL_CALLS = _safe_int('REPORT_AGENT_MAX_TOOL_CALLS', 5)
+    REPORT_AGENT_MAX_REFLECTION_ROUNDS = _safe_int('REPORT_AGENT_MAX_REFLECTION_ROUNDS', 2)
+    REPORT_AGENT_TEMPERATURE = _safe_float('REPORT_AGENT_TEMPERATURE', 0.5)
     
     @classmethod
     def validate(cls):

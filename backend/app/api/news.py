@@ -5,6 +5,7 @@ News API routes — Auto Source Collection
 import io
 import re
 import threading
+import uuid
 
 from flask import request, jsonify
 from werkzeug.datastructures import FileStorage
@@ -148,8 +149,8 @@ def create_project_from_articles():
                 f"{truncated_text}"
             )
 
-            # Save as individual file
-            filename = _safe_filename(title) + '.txt'
+            # Save as individual file — append short UUID to avoid filename collisions
+            filename = f"{_safe_filename(title)}_{str(uuid.uuid4())[:6]}.txt"
             file_bytes = article_content.encode('utf-8', errors='replace')
             file_storage = FileStorage(
                 stream=io.BytesIO(file_bytes),
@@ -165,6 +166,9 @@ def create_project_from_articles():
                 'size': file_info['size'],
             })
             combined_texts.append(article_content)
+
+        if not combined_texts:
+            return jsonify({'success': False, 'error': 'None of the selected articles had extractable text'}), 400
 
         # Save combined extracted text
         combined = '\n\n---\n\n'.join(combined_texts)

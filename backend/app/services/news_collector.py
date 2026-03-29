@@ -136,7 +136,8 @@ Respond with a JSON object: {{"queries": ["query1", "query2", "query3"]}}"""
                 description = item.findtext("description", "").strip()
                 # Source name from <source> tag
                 source_el = item.find("source")
-                source = source_el.text.strip() if source_el is not None else self._domain_from_url(link)
+                source = (source_el.text or '').strip() if source_el is not None else ''
+                source = source or self._domain_from_url(link)
 
                 # Clean HTML from description
                 snippet = re.sub(r"<[^>]+>", "", description).strip()[:300]
@@ -270,22 +271,25 @@ Respond with a JSON object: {{"queries": ["query1", "query2", "query3"]}}"""
 
         with ThreadPoolExecutor(max_workers=self.FETCH_WORKERS) as executor:
             futures = {executor.submit(fetch_one, art): art["id"] for art in articles}
-            for future in as_completed(futures, timeout=120):
-                completed += 1
-                try:
-                    art_id, text = future.result(timeout=self.FETCH_TIMEOUT + 2)
-                    if text:
-                        updated[art_id]["text"] = text
-                        updated[art_id]["word_count"] = len(text.split())
-                    elif updated[art_id]["snippet"]:
-                        updated[art_id]["text"] = updated[art_id]["snippet"]
-                        updated[art_id]["word_count"] = len(updated[art_id]["snippet"].split())
-                except Exception as e:
-                    logger.debug(f"Fetch failed: {e}")
+            try:
+                for future in as_completed(futures, timeout=120):
+                    completed += 1
+                    try:
+                        art_id, text = future.result(timeout=self.FETCH_TIMEOUT + 2)
+                        if text:
+                            updated[art_id]["text"] = text
+                            updated[art_id]["word_count"] = len(text.split())
+                        elif updated[art_id]["snippet"]:
+                            updated[art_id]["text"] = updated[art_id]["snippet"]
+                            updated[art_id]["word_count"] = len(updated[art_id]["snippet"].split())
+                    except Exception as e:
+                        logger.debug(f"Fetch failed: {e}")
 
-                if progress_callback:
-                    pct = 30 + int((completed / total) * 50)
-                    progress_callback(pct, f"Fetched {completed}/{total} articles...")
+                    if progress_callback:
+                        pct = 30 + int((completed / total) * 50)
+                        progress_callback(pct, f"Fetched {completed}/{total} articles...")
+            except FuturesTimeoutError:
+                logger.warning("Article fetch timed out after 120s, proceeding with fetched articles so far")
 
         # Only keep articles that have some text content
         result = [a for a in updated.values() if a["text"]]
