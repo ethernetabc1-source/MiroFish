@@ -559,28 +559,40 @@ Write a "Future Prediction Report" that answers:
 1. Under the conditions we set, what happened in the future?
 2. How did the different stakeholder groups (agents) react and act?
 3. What future trends, risks, or opportunities does this simulation reveal?
-4. What is the predicted probability of the key outcome (the prediction question)?
+4. What is the calibrated probability of the key outcome, grounded in simulation evidence AND historical base rates?
 
 [Report Positioning]
 - ✅ This is a simulation-based prediction report — it reveals "if this condition holds, what happens next"
 - ✅ Focus on predicted outcomes: event trajectory, group reactions, emergent phenomena, risks
 - ✅ Agent behavior in the simulation IS the prediction of future human behavior
-- ✅ Always conclude with a probability estimate for the core prediction question
+- ✅ Probability must be calibrated: anchor to historical base rates, then adjust based on simulation signals
 - ❌ Do NOT analyze the current state of the real world
 - ❌ Do NOT write a generic opinion survey
+
+[Probability Calibration Rules — Critical for Accuracy]
+When estimating probability, follow this three-step process:
+1. **Base rate**: Start with the historical frequency of this type of event (e.g. "US has conducted direct military strikes on a sovereign state ~3 times in 30 years = ~10% per year base rate")
+2. **Simulation signal**: Adjust based on what the simulation revealed — did agents escalate or de-escalate? What was the dominant narrative? Were red lines crossed?
+3. **Market anchor** (if provided in the simulation goal): Note the current prediction market price and explain whether the simulation confirms, contradicts, or is consistent with it
+
+The final probability must reflect all three inputs, not just LLM intuition.
 
 [Section Count]
 - Minimum 2 sections, maximum 5 sections
 - No sub-sections — each section is a complete standalone piece of content
 - Keep content focused on core prediction findings
 - Design the section structure based on what the simulation revealed
-- The FINAL section must always be titled "Prediction Verdict" and contain the probability estimate
+- The FINAL section must always be titled "Prediction Verdict" and contain the full probability assessment
 
 Output a JSON report outline in the following format:
 {
     "title": "Report title",
     "summary": "One-sentence summary of the core prediction finding",
-    "predicted_probability": <0-100 integer, estimated probability that the predicted event occurs>,
+    "predicted_probability": <0-100 integer, point estimate of probability the event occurs>,
+    "probability_low": <0-100 integer, lower bound of 80% confidence interval>,
+    "probability_high": <0-100 integer, upper bound of 80% confidence interval>,
+    "key_upside_factors": ["factor driving probability higher", ...],
+    "key_downside_factors": ["factor driving probability lower", ...],
     "sections": [
         {
             "title": "Section title",
@@ -589,7 +601,8 @@ Output a JSON report outline in the following format:
     ]
 }
 
-Note: sections array must have minimum 2, maximum 5 elements. The last section must be "Prediction Verdict"."""
+Note: sections array must have minimum 2, maximum 5 elements. The last section must be "Prediction Verdict".
+probability_low must be <= predicted_probability <= probability_high."""
 
 PLAN_USER_PROMPT_TEMPLATE = """\
 [Prediction Scenario]
@@ -608,11 +621,12 @@ From your god's-eye view, assess this rehearsal of the future:
 1. Under the conditions we set, what state did the future reach?
 2. How did the different stakeholder groups (agents) react and act?
 3. What future trends, risks, or opportunities does this simulation reveal?
-4. Based on the simulation evidence, what is the probability (0-100%) that the predicted event occurs?
+4. Following the three-step calibration process (base rate → simulation signal → market anchor), what is the probability range that the predicted event occurs?
 
 Design the most appropriate report section structure based on the prediction findings.
 
-Reminder: sections must be minimum 2, maximum 5. The last section must be "Prediction Verdict" containing the probability estimate and key reasoning."""
+Reminder: sections must be minimum 2, maximum 5. The last section must be "Prediction Verdict".
+Output probability_low, predicted_probability, and probability_high as separate integers (80% confidence interval)."""
 
 # ── 章节生成 prompt ──
 
@@ -667,10 +681,14 @@ Your task is to:
    - Do not add information not present in the simulation
    - If information on a topic is insufficient, state so clearly
 
-5. [For "Prediction Verdict" section specifically]
-   - State a clear probability estimate: "Predicted probability: X%"
-   - List the top 3 factors driving the prediction up and down
-   - Compare against any known market/consensus probability if relevant
+5. [For "Prediction Verdict" section specifically — follow this exact structure]
+   a. **Base Rate Anchor**: State the historical base rate for this type of event ("Historically, X has occurred Y times in Z years, implying a base rate of ~N%")
+   b. **Simulation Signal**: Summarize what the simulation revealed — did agents broadly escalate or de-escalate? What emergent behavior was most telling?
+   c. **Market Comparison** (if a market price was given in the scenario): State whether the simulation confirms, contradicts, or is consistent with the market price, and why
+   d. **Probability Verdict**: State clearly — "**Predicted probability: X% (range: Y%–Z%)**"
+   e. **Key upside risks** (factors that would push the probability higher): bullet list
+   f. **Key downside risks** (factors that would push the probability lower): bullet list
+   g. **Confidence note**: briefly explain the main source of uncertainty in this estimate
 
 ═══════════════════════════════════════════════════════════════
 [⚠️ Format Rules — Critical]
