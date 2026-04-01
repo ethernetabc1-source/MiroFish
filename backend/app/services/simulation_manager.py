@@ -33,6 +33,14 @@ class SimulationStatus(str, Enum):
     FAILED = "failed"
 
 
+def _safe_simulation_status(value: str) -> "SimulationStatus":
+    """Return SimulationStatus for value, falling back to CREATED on unknown values."""
+    try:
+        return SimulationStatus(value)
+    except ValueError:
+        return SimulationStatus.CREATED
+
+
 class PlatformType(str, Enum):
     """平台类型"""
     TWITTER = "twitter"
@@ -173,7 +181,7 @@ class SimulationManager:
             graph_id=data.get("graph_id", ""),
             enable_twitter=data.get("enable_twitter", True),
             enable_reddit=data.get("enable_reddit", True),
-            status=SimulationStatus(data.get("status", "created")),
+            status=_safe_simulation_status(data.get("status", "created")),
             entities_count=data.get("entities_count", 0),
             profiles_count=data.get("profiles_count", 0),
             entity_types=data.get("entity_types", []),

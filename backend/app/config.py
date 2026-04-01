@@ -17,21 +17,55 @@ else:
     load_dotenv(override=True)
 
 
+def _safe_int(key: str, default: int) -> int:
+    """Parse env var as int, falling back to default on invalid value."""
+    try:
+        return int(os.environ.get(key, str(default)))
+    except (ValueError, TypeError):
+        return default
+
+
+def _safe_float(key: str, default: float) -> float:
+    """Parse env var as float, falling back to default on invalid value."""
+    try:
+        return float(os.environ.get(key, str(default)))
+    except (ValueError, TypeError):
+        return default
+
+
+def _read_bearer_token():
+    """Read Claude Code session bearer token from file if available."""
+    token_file = os.environ.get('CLAUDE_SESSION_INGRESS_TOKEN_FILE')
+    if token_file and os.path.exists(token_file):
+        try:
+            return open(token_file).read().strip()
+        except Exception:
+            pass
+    return None
+
+
 class Config:
     """Flask配置类"""
-    
+
     # Flask配置
     SECRET_KEY = os.environ.get('SECRET_KEY', 'mirofish-secret-key')
     DEBUG = os.environ.get('FLASK_DEBUG', 'True').lower() == 'true'
-    
+
     # JSON配置 - 禁用ASCII转义，让中文直接显示（而不是 \uXXXX 格式）
     JSON_AS_ASCII = False
-    
+
+    # LLM provider: 'anthropic' or 'openai' (default)
+    LLM_PROVIDER = os.environ.get('LLM_PROVIDER', 'openai')
+
     # LLM配置（统一使用OpenAI格式）
     LLM_API_KEY = os.environ.get('LLM_API_KEY')
     LLM_BASE_URL = os.environ.get('LLM_BASE_URL', 'https://api.openai.com/v1')
     LLM_MODEL_NAME = os.environ.get('LLM_MODEL_NAME', 'gpt-4o-mini')
-    
+
+    # Anthropic配置（使用Claude Code session auth）
+    ANTHROPIC_BASE_URL = os.environ.get('ANTHROPIC_BASE_URL', 'https://api.anthropic.com')
+    ANTHROPIC_BEARER_TOKEN = _read_bearer_token()
+
     # Zep配置
     ZEP_API_KEY = os.environ.get('ZEP_API_KEY')
     
@@ -45,7 +79,7 @@ class Config:
     DEFAULT_CHUNK_OVERLAP = 50  # 默认重叠大小
     
     # OASIS模拟配置
-    OASIS_DEFAULT_MAX_ROUNDS = int(os.environ.get('OASIS_DEFAULT_MAX_ROUNDS', '10'))
+    OASIS_DEFAULT_MAX_ROUNDS = _safe_int('OASIS_DEFAULT_MAX_ROUNDS', 10)
     OASIS_SIMULATION_DATA_DIR = os.path.join(os.path.dirname(__file__), '../uploads/simulations')
     
     # OASIS平台可用动作配置
@@ -59,16 +93,20 @@ class Config:
     ]
     
     # Report Agent配置
-    REPORT_AGENT_MAX_TOOL_CALLS = int(os.environ.get('REPORT_AGENT_MAX_TOOL_CALLS', '5'))
-    REPORT_AGENT_MAX_REFLECTION_ROUNDS = int(os.environ.get('REPORT_AGENT_MAX_REFLECTION_ROUNDS', '2'))
-    REPORT_AGENT_TEMPERATURE = float(os.environ.get('REPORT_AGENT_TEMPERATURE', '0.5'))
+    REPORT_AGENT_MAX_TOOL_CALLS = _safe_int('REPORT_AGENT_MAX_TOOL_CALLS', 5)
+    REPORT_AGENT_MAX_REFLECTION_ROUNDS = _safe_int('REPORT_AGENT_MAX_REFLECTION_ROUNDS', 2)
+    REPORT_AGENT_TEMPERATURE = _safe_float('REPORT_AGENT_TEMPERATURE', 0.5)
     
     @classmethod
     def validate(cls):
         """验证必要配置"""
         errors = []
-        if not cls.LLM_API_KEY:
-            errors.append("LLM_API_KEY 未配置")
+        if cls.LLM_PROVIDER == 'anthropic':
+            if not cls.ANTHROPIC_BEARER_TOKEN:
+                errors.append("Anthropic bearer token not found (CLAUDE_SESSION_INGRESS_TOKEN_FILE missing)")
+        else:
+            if not cls.LLM_API_KEY:
+                errors.append("LLM_API_KEY 未配置")
         if not cls.ZEP_API_KEY:
             errors.append("ZEP_API_KEY 未配置")
         return errors
